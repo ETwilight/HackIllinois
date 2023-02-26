@@ -1,8 +1,27 @@
 <script>
     let fps = 1;
     let videoData = null;
-    //$: serverVideoSrc = videoData == null ? null : `/dlv?dfn=${videoData.name}`; // bind
 	let serverVideoSrc = null;
+	$: {
+		if (file == null) {
+			serverVideoSrc = null;
+		} else {
+			fetch('/my-video-endpoint')
+			.then(response => response.blob()) // get video file as a blob
+			.then(blob => {
+				const videoUrl = URL.createObjectURL(blob); // create object URL for blob
+				videoElement.src = videoUrl; // set video element src to object URL
+			})
+			.catch(error => {
+				console.error('Error loading video:', error);
+			});
+			fetch(`/dlv?dfn=${file.name}`)
+				.then(res => res.blob())
+				.then(blob => {
+					serverVideoSrc = URL.createObjectURL(blob);
+				});
+		}
+	}
     import { getRandomAdjective } from "./randomAdjective.js";
     import { submitFormInBackground } from "./formSubmission.js";
     import DownloadButton from "./DownloadButton.svelte";
@@ -52,24 +71,27 @@
     }
 
     function submitVideoForm(e) {
+		console.log(file.name);
 		console.log(fileInput);
         submitting = true;
 		console.log(e.srcElement);
         submitFormInBackground(e)
             .then(res => {
                 submitting = false;
+				/*
 				if (res.status !== 200) {
 					errorText = `Got a bad response from the server (${res.status})`;
 				} else {
+					*/
 					// send up
-					serverVideoReadyState = 2;
-					console.log(serverVideoSrc);
-					return res.text();
-				}
+					return res;//.text()
+				//}
             })
 			.then(output => {
+				serverVideoReadyState = 2;
 				// Handle text response if needed
-				serverVideoSrc = output;
+				//serverVideoSrc = output;
+				//console.log(serverVideoSrc);
 			})
             .catch(err => {
                 submitting = false;
@@ -114,11 +136,6 @@
             {/if}
         </div>
     </div>
-    
-	<label for="fname">
-		<span>Output Name</span>
-		<input id="fname" name="fname" type="text"/>
-	</label>
     <label for="prompt">
 		<span>Prompt</span>
 		<input id="prompt" name="prompt" type="text" placeholder={promptPlaceholder} />

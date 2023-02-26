@@ -70,7 +70,7 @@ def video2frame(video_file,framepersec=60):
             # then save the frame
             cv2.imwrite(os.path.join(filename, f"frame{temp}.png"), frame) 
             compress.resize_png(os.path.join(filename, f"frame{temp}.png"))
-            temp=temp+1
+            temp = temp + MAX_FPS
             # drop the duration spot from the list, since this duration spot is already saved
             try:
                 saving_frames_durations.pop(0)
@@ -80,8 +80,29 @@ def video2frame(video_file,framepersec=60):
         count += 1
     return filename
 
-def interpolation(fps):
-    pass
+def interpolation(pathOut, fps):
+    # need MAX_FPS - fps frames to interpolate
+    to_interpolate = MAX_FPS - fps
+    weights = [i/float(to_interpolate - 1) for i in range(to_interpolate)]
+    if not os.path.isdir(pathOut):
+        os.mkdir(pathOut)
+    files = [f for f in os.listdir(pathOut) if isfile(join(pathOut, f))]
+    #for sorting the file names properly
+    files.sort(key = lambda x: int(x[5:-4]))
+    for i in range(int(len(files)) - 1):
+        j = i + 1
+        filename=pathOut+files[i]
+        filename2=pathOut+files[j]
+        #reading each files
+        img = np.array(Image.open(filename))
+        img2 = np.array(Image.open(filename2))
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+        img2 = cv2.cvtColor(img2, cv2.COLOR_RGB2BGR)
+        for k in range(to_interpolate):
+            w = weights[k]
+            blended = cv2.addWeighted(img, 1.0 - w, img2, w, 0)
+            path = pathOut + f"frame{i*MAX_FPS + k + 1}.png"
+            cv2.imwrite(path, blended)
 
 
 '''def frame2video(pathIn,pathOut,fps):
@@ -110,6 +131,7 @@ def convert_frames_to_video(pathIn,pathOut,fps):
     files = [f for f in os.listdir(pathIn) if isfile(join(pathIn, f))]
     #for sorting the file names properly
     files.sort(key = lambda x: int(x[5:-4]))
+    size = None
     for i in range(int(len(files))):
         filename=pathIn + files[i]
         #reading each files3
@@ -133,7 +155,7 @@ def processframes(pathIn, pathOut):
     files.sort(key = lambda x: int(x[5:-4]))
     temp=0
     for i in range(int(len(files))):
-        logging.info("DEAILING WITH FRAME "+str(i))
+        #logging.info("DEAILING WITH FRAME "+str(i))
         filename=pathIn+files[i]
         #reading each files
         img = Image.open(filename)
@@ -144,8 +166,8 @@ def processframes(pathIn, pathOut):
         output = webuiAPI.generator.controlNetImg2img(image=img, setup=webuiAPI.setting.setup)
         #inserting the frames into an image array
         webuiAPI.generator.saveimg(path=pathOut, img=output, fileName=f"frame{temp}")
-        temp+=1
-    logging.info("DEAL FRAME FINISH")
+        temp += MAX_FPS
+    #logging.info("DEAL FRAME FINISH")
 
 if __name__=="__main__":
     import sys

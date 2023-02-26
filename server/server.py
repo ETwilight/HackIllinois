@@ -39,29 +39,38 @@ def upload_video():
     prompt = request.form['prompt']
     style = request.form['styles']
     type = request.form['type']
-    setting.add_prompt(prompt)
-    setting.setup_model_match(style)
-    setting.setup_type_match(type)
-    app.logger.info(f"style: {setting.setup['sd_model_checkpoint']}")
-    app.logger.info(f"type: {setting.setup['controlnet_module']}")
+    #setting.add_prompt(prompt)
+    #setting.setup_model_match(style)
+    #setting.setup_type_match(type)
+    #app.logger.info(f"style: {setting.setup['sd_model_checkpoint']}")
+    #app.logger.info(f"type: {setting.setup['controlnet_module']}")
     samplingMethod = request.form['samplingMethod']
     file = request.files['video']
     logging.info(f"file: {file}")
-    filename = request.form["fname"]
+    filename = file.filename
+    #filename = request.form["fname"]
     if not os.path.isdir(app.config['UPLOAD_FOLDER']):
         os.mkdir(app.config['UPLOAD_FOLDER'])
     file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-    fname = filename+".mp4"
+    fname = filename
     frameconverter.video2frame(os.path.join(app.config['UPLOAD_FOLDER'], fname), fps)
     dirin = os.path.join(app.config['UPLOAD_FOLDER'], fname[:-4] + "-opencv\\")
     if not os.path.isdir("outputs"):
         os.mkdir("outputs")
     dirout = "outputs/" + fname[:-4] + "-outimg"
-    frameconverter.processframes(dirin, dirout)
+    #frameconverter.interpolation(dirin, fps)
+    #frameconverter.processframes(dirin, dirout)
     if not os.path.isdir(app.config['DOWNLOAD_FOLDER']):
         os.mkdir(app.config['DOWNLOAD_FOLDER'])
-    frameconverter.frame2video(dirout+"/", app.config['DOWNLOAD_FOLDER']+"/"+fname[:-4]+".mp4", fps)
-    return send_from_directory(app.config['DOWNLOAD_FOLDER'], f"{fname[:-4]}.mp4")
+    #dirout+"/"
+    frameconverter.convert_frames_to_video(dirin+"/", app.config['DOWNLOAD_FOLDER']+"/"+fname[:-4]+".mp4", fps)#frameconverter.MAX_FPS)
+    return "ok"
+
+@app.route("/dlv", methods=["GET"])
+def download_video():
+    dfn = str(request.args.get('dfn'))
+    app.logger.debug("dfn = " + dfn)
+    return send_from_directory("../downloads", "statueofliberty.mp4")#app.config['DOWNLOAD_FOLDER'], dfn)
 
 if __name__ == "__main__":
     app.config['UPLOAD_FOLDER'] = 'uploads'
